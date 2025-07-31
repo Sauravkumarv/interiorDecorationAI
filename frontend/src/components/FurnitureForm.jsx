@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './FurnitureForm.css';
-
+import axios from 'axios';
 
 const FurnitureForm = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +12,8 @@ const FurnitureForm = () => {
     roomImage: null
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     if (files) {
@@ -21,23 +23,65 @@ const FurnitureForm = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const resetForm = () => {
+    setFormData({
+      itemName: '',
+      description: '',
+      dimensions: '',
+      color: '',
+      image: null,
+      roomImage: null
+    });
+    // Reset file inputs
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => input.value = '');
+  };
+
+  const handleSubmit = async(e) => {
     e.preventDefault();
-    console.log(formData);
-    alert("Form submitted! (You can now send this to backend for AI placement)");
-    // send formData to backend using fetch or axios
+    setIsSubmitting(true);
+
+    const form = new FormData();
+    form.append("itemName", formData.itemName);
+    form.append("description", formData.description);
+    form.append("dimensions", formData.dimensions);
+    form.append("color", formData.color);
+    form.append("furnitureImage", formData.image);
+    form.append("roomImage", formData.roomImage);
+
+    try {
+      const res = await axios.post("http://localhost:5000/api/items/submit", form, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      
+      console.log(res.data);
+      alert("Item submitted successfully!");
+      resetForm(); // Clear the form after successful submission
+      
+    } catch (err) {
+      console.error(err);
+      
+      // Better error handling
+      const errorMessage = err.response?.data?.message || err.message || "Failed to submit item";
+      alert(`Error: ${errorMessage}`);
+      
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="furniture-form-container">
-     <h2 class="heading">
-  <span class="plain-white">Submit </span> 
-  <span class="head">Your Furniture </span>  
-  <span class="plain-white">or Decor </span> 
-  <span class="head">Item</span> 
-</h2>
+      <h2 className="heading">
+        <span className="plain-white">Submit </span> 
+        <span className="head">Your Furniture </span>  
+        <span className="plain-white">or Decor </span> 
+        <span className="head">Item</span> 
+      </h2>
+      
       <form className="furniture-form" onSubmit={handleSubmit}>
-
         <label>Item Name</label>
         <input
           type="text"
@@ -46,6 +90,7 @@ const FurnitureForm = () => {
           onChange={handleChange}
           required
           placeholder="e.g., Sofa, Wall Art"
+          disabled={isSubmitting}
         />
 
         <label>Description</label>
@@ -55,6 +100,7 @@ const FurnitureForm = () => {
           onChange={handleChange}
           placeholder="Material, purpose, age, etc."
           rows={3}
+          disabled={isSubmitting}
         />
 
         <label>Dimensions (L x W x H in cm)</label>
@@ -64,6 +110,7 @@ const FurnitureForm = () => {
           value={formData.dimensions}
           onChange={handleChange}
           placeholder="e.g., 180 x 80 x 75"
+          disabled={isSubmitting}
         />
 
         <label>Color</label>
@@ -73,6 +120,7 @@ const FurnitureForm = () => {
           value={formData.color}
           onChange={handleChange}
           placeholder="e.g., Grey, Beige"
+          disabled={isSubmitting}
         />
 
         <label>Upload Furniture Item Image</label>
@@ -82,6 +130,7 @@ const FurnitureForm = () => {
           accept="image/*"
           onChange={handleChange}
           required
+          disabled={isSubmitting}
         />
 
         <label>Upload Room Image</label>
@@ -91,9 +140,12 @@ const FurnitureForm = () => {
           accept="image/*"
           onChange={handleChange}
           required
+          disabled={isSubmitting}
         />
 
-        <button type="submit">Submit</button>
+        <button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Submitting...' : 'Submit'}
+        </button>
       </form>
     </div>
   );
